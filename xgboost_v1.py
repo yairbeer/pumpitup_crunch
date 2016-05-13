@@ -56,8 +56,8 @@ Split into train and test
 """
 print(dataframe)
 
-train = dataframe.iloc[train_index]
-test = dataframe.iloc[test_index]
+train = dataframe.loc[train_index]
+test = dataframe.loc[test_index]
 
 """
 CV

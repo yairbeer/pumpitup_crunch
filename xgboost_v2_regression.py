@@ -6,6 +6,7 @@ from sklearn.grid_search import ParameterGrid
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 import datetime
+import scipy.optimize as optimize
 
 
 def ranking(predictions, split_index):
@@ -20,9 +21,9 @@ def ranking(predictions, split_index):
 
     for i in range(1, len(split_index)):
         cond = (split_index[i-1] <= predictions) * 1 * (predictions < split_index[i])
-        ranked_predictions[cond.astype('bool')] = i+1
+        ranked_predictions[cond.astype('bool')] = i
     cond = (predictions >= split_index[-1])
-    ranked_predictions[cond] = len(split_index) + 1
+    ranked_predictions[cond] = len(split_index)
     # print cond
     # print ranked_predictions
     return ranked_predictions
@@ -35,9 +36,11 @@ def opt_cut_global(predictions, results):
     :param results:
     :return: global coarse optimized cutter
     """
+    print(predictions)
+    print(results)
     print('start quadratic splitter optimization')
-    x0_range = np.arange(-2, 2, 0.25)
-    x1_range = np.arange(0.6, 1.5, 0.15)
+    x0_range = np.arange(-0.3, 0.3, 0.05)
+    x1_range = np.arange(0.5, 1.5, 0.1)
     bestcase = np.array(ranking(predictions, [0.5, 1.5])).astype('int')
     bestscore = accuracy_score(results, bestcase)
     print('The starting score is %f' % bestscore)
@@ -141,22 +144,21 @@ param_grid = [
               {
                'silent': [1],
                'nthread': [3],
-               'eval_metric': ['mlogloss'],
+               'eval_metric': ['rmse'],
                'eta': [0.01],
-               'objective': ['multi:softmax'],
+               'objective': ['reg:linear'],
                'max_depth': [6],
                # 'min_child_weight': [1],
-               'num_round': [1000],
+               'num_round': [100],
                'gamma': [0],
                'subsample': [1.0],
                'colsample_bytree': [1.0],
                'n_monte_carlo': [1],
-               'cv_n': [4],
+               'cv_n': [2],
                'test_rounds_fac': [1.2],
                'count_n': [0],
-               'mc_test': [False],
-               'num_class': [3]
-               }
+               'mc_test': [False]
+              }
               ]
 
 print('start CV optimization')
@@ -219,9 +221,22 @@ for params in ParameterGrid(param_grid):
             predicted_results = xgclassifier.predict(xg_test)
             train_predictions[cv_test_index] = predicted_results
 
-        print('AUC score ', accuracy_score(train_labels.values, train_predictions))
-        mc_auc.append(accuracy_score(train_labels.values, train_predictions))
-        mc_train_pred.append(train_predictions)
+        print(train_predictions)
+        print((train_predictions + 0.5).astype(int))
+        print('Calculating final splitter')
+        splitter = opt_cut_global(train_predictions, train_labels.values.flatten())
+        # train machine learning
+        res = optimize.minimize(opt_cut_local, splitter, args=(train_predictions, train_labels.values.flatten()),
+                                method='Nelder-Mead',
+                                # options={'disp': True}
+                                )
+        classified_predicted_results = np.array(ranking(train_predictions, res.x)).astype('int')
+        print(pd.Series(classified_predicted_results).value_counts())
+        print(accuracy_score(train_labels.values.flatten(), classified_predicted_results))
+
+        print('AUC score ', accuracy_score(train_labels.values, (train_predictions + 0.5).astype(int)))
+        mc_auc.append(accuracy_score(train_labels.values, classified_predicted_results))
+        mc_train_pred.append(classified_predicted_results)
         mc_round.append(num_round)
 
     print(np.array(mc_train_pred))
@@ -235,7 +250,8 @@ for params in ParameterGrid(param_grid):
     print_results.append('The AUC range is: %.5f to %.5f and best n_round: %d' %
                          (mc_acc_mean[-1] - mc_acc_sd[-1], mc_acc_mean[-1] + mc_acc_sd[-1], mc_round_list[-1]))
     print('For ', mc_auc)
-    print('The accuracy of the average prediction is: %.5f' % accuracy_score(train_labels.values, mc_train_pred))
+    print('The accuracy of the average prediction is: %.5f' % accuracy_score(train_labels.values,
+                                                                             (mc_train_pred + 0.5).astype(int)))
     meta_solvers_train.append(mc_train_pred)
 
     # train machine learning
@@ -290,3 +306,4 @@ Final Solution
 # CV = 4
 # No date (The only, cv=5): 0.53988215488215485
 # Added measurement year, weekday, month, week of the year and age: 0.540050505051
+# Regression:
