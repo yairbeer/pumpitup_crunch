@@ -8,6 +8,69 @@ from sklearn.metrics import accuracy_score
 import datetime
 
 
+def ranking(predictions, split_index):
+    """
+    Ranking classification results in accordance to a splitter
+    :param predictions:
+    :param split_index:
+    :return: classified ranked predictions
+    """
+    # print predictions
+    ranked_predictions = np.ones(predictions.shape)
+
+    for i in range(1, len(split_index)):
+        cond = (split_index[i-1] <= predictions) * 1 * (predictions < split_index[i])
+        ranked_predictions[cond.astype('bool')] = i+1
+    cond = (predictions >= split_index[-1])
+    ranked_predictions[cond] = len(split_index) + 1
+    # print cond
+    # print ranked_predictions
+    return ranked_predictions
+
+
+def opt_cut_global(predictions, results):
+    """
+    Find brute force optimized cutter
+    :param predictions:
+    :param results:
+    :return: global coarse optimized cutter
+    """
+    print('start quadratic splitter optimization')
+    x0_range = np.arange(-2, 2, 0.25)
+    x1_range = np.arange(0.6, 1.5, 0.15)
+    bestcase = np.array(ranking(predictions, [0.5, 1.5])).astype('int')
+    bestscore = accuracy_score(results, bestcase)
+    print('The starting score is %f' % bestscore)
+
+    best_splitter = 0
+    # optimize classifier
+    for x0 in x0_range:
+        for x1 in x1_range:
+            case = np.array(ranking(predictions, (x0 + x1 * riskless_splitter))).astype('int')
+            score = accuracy_score(results, case)
+            if score > bestscore:
+                bestscore = score
+                best_splitter = x0 + x1 * riskless_splitter
+                print('For splitter ', (x0 + x1 * riskless_splitter))
+                print('Variables x0 = %f, x1 = %f' % (x0, x1))
+                print('The score is %f' % bestscore)
+    return best_splitter
+
+
+def opt_cut_local(x, *args):
+    """
+    Find local optimized cutter
+    :param x: current cutter
+    :param args: predictions, results
+    :return: current result
+    """
+    predictions, results = args
+    case = np.array(ranking(predictions, x)).astype('int')
+    score = -1 * accuracy_score(results, case)
+    # print score
+    return score
+
+
 def date_parser(df):
     date_recorder = list(map(lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d'),
                                df['date_recorded'].values))
@@ -62,6 +125,7 @@ test = dataframe.iloc[test_index]
 """
 CV
 """
+riskless_splitter = np.array([0.5, 1.5])
 best_score = 0
 best_params = 0
 best_train_prediction = 0
