@@ -122,7 +122,7 @@ for params in ParameterGrid(param_grid):
         kf = StratifiedKFold(train_labels.values.flatten(), n_folds=cv_n, shuffle=True, random_state=i_mc ** 3)
 
         xgboost_rounds = []
-
+        # Finding optimized number of rounds
         for cv_train_index, cv_test_index in kf:
             X_train, X_test = train.values[cv_train_index, :], train.values[cv_test_index, :]
             y_train = train_labels.iloc[cv_train_index].values.flatten()
@@ -135,14 +135,13 @@ for params in ParameterGrid(param_grid):
             watchlist = [(xg_train, 'train'), (xg_test, 'test')]
 
             num_round = params['num_round']
-            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist,
-                                         early_stopping_rounds=early_stopping
-                                         );
+            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, early_stopping_rounds=early_stopping);
             xgboost_rounds.append(xgclassifier.best_iteration)
 
         num_round = int(np.mean(xgboost_rounds))
         print('The best n_rounds is %d' % num_round)
 
+        # Calculate train predictions over optimized number of rounds
         for cv_train_index, cv_test_index in kf:
             X_train, X_test = train.values[cv_train_index, :], train.values[cv_test_index, :]
             y_train = train_labels.iloc[cv_train_index].values.flatten()
@@ -165,6 +164,7 @@ for params in ParameterGrid(param_grid):
         mc_train_pred.append(train_predictions)
         mc_round.append(num_round)
 
+    # Getting the mean integer
     mc_train_pred = (np.mean(np.array(mc_train_pred), axis=0) + 0.5).astype(int)
 
     mc_round_list.append(int(np.mean(mc_round)))
@@ -182,6 +182,7 @@ for params in ParameterGrid(param_grid):
     xg_train = xgboost.DMatrix(train.values, label=train_labels.values)
     xg_test = xgboost.DMatrix(test.values)
 
+    # predicting the test set
     if params['mc_test']:
         watchlist = [(xg_train, 'train')]
 
@@ -208,6 +209,7 @@ for params in ParameterGrid(param_grid):
         submission_file['status_group'] = meta_solvers_test[-1]
         submission_file.to_csv("results/test_xgboost_d6.csv")
 
+    # saving best score for printing
     if mc_acc_mean[-1] < best_score:
         print('new best log loss')
         best_score = mc_acc_mean[-1]
@@ -230,4 +232,4 @@ Final Solution
 # CV = 4, eta = 0.1
 # Added measurement year, weekday, month, week of the year and age: 0.80591
 # Optimizing Subsample and colsample_bytree: 0.809
-# testing standard deviation (montecarlo = 5):
+# testing standard deviation (montecarlo = 5): SD = 0.004
