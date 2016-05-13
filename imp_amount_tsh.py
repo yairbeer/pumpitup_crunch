@@ -25,7 +25,6 @@ train = pd.DataFrame.from_csv('train_preprocessed_imp_height.csv')
 train_index = train.index.values
 test = pd.DataFrame.from_csv('test_preprocessed_imp_height.csv')
 test_index = test.index.values
-print(train)
 
 # combing tran and test data
 # helps working on all the data and removes factorization problems between train and test
@@ -47,6 +46,7 @@ imp_test = dataframe.iloc[(dataframe[imp_col] == imp_val).values]
 imp_test_index = imp_test.index.values
 
 imp_y = imp_train[imp_col].values.flatten()
+imp_y = np.log(imp_y)
 print(imp_y)
 
 del imp_train[imp_col]
@@ -177,9 +177,9 @@ for params in ParameterGrid(param_grid):
         """
         added imputed results
         """
-        imp_train['imp_result_col'] = meta_solvers_train[-1]
+        imp_train['imp_result_col'] = np.exp(meta_solvers_train[-1])
         imp_train[imp_col] = dataframe[imp_col].loc[imp_train_index].values
-        imp_test['imp_result_col'] = meta_solvers_test[-1]
+        imp_test['imp_result_col'] = np.exp(meta_solvers_test[-1])
         imp_test[imp_col] = dataframe[imp_col].loc[imp_test_index].values
 
         imp_dataframe = pd.concat([imp_train, imp_test], axis=0)

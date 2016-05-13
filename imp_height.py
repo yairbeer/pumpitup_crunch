@@ -60,7 +60,6 @@ imp_test = dataframe.iloc[(dataframe[imp_col] == imp_val).values]
 imp_test_index = imp_test.index.values
 
 imp_y = imp_train[imp_col].values.flatten()
-print(imp_y)
 
 del imp_train[imp_col]
 del imp_test[imp_col]
@@ -77,7 +76,7 @@ param_grid = [
                'objective': ['reg:linear'],
                'max_depth': [6],
                # 'min_child_weight': [1],
-               'num_round': [6000],
+               'num_round': [10000],
                'gamma': [0],
                'subsample': [0.75],
                'colsample_bytree': [0.75],
