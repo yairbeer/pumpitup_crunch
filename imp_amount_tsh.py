@@ -148,12 +148,12 @@ for params in ParameterGrid(param_grid):
     mc_round_list.append(int(np.mean(mc_round)))
     mc_rsme_mean.append(np.mean(mc_rsme))
     mc_rsme_sd.append(np.std(mc_rsme))
-    print('The accuracy range is: %.5f to %.5f and best n_round: %d' %
+    print('The RMSE range is: %.5f to %.5f and best n_round: %d' %
           (mc_rsme_mean[-1] - mc_rsme_sd[-1], mc_rsme_mean[-1] + mc_rsme_sd[-1], mc_round_list[-1]))
     print_results.append('The AUC range is: %.5f to %.5f and best n_round: %d' %
                          (mc_rsme_mean[-1] - mc_rsme_sd[-1], mc_rsme_mean[-1] + mc_rsme_sd[-1], mc_round_list[-1]))
     print('For ', mc_rsme)
-    print('The accuracy of the average prediction is: %.5f' % np.sqrt(mean_squared_error(imp_y, train_predictions)))
+    print('The RMSE of the average prediction is: %.5f' % np.sqrt(mean_squared_error(imp_y, train_predictions)))
     meta_solvers_train.append(mc_train_pred)
 
     # predicting the test set
@@ -178,9 +178,9 @@ for params in ParameterGrid(param_grid):
         added imputed results
         """
         imp_train['imp_result_col'] = meta_solvers_train[-1]
-        imp_train[imp_col] = dataframe[imp_col].iloc[imp_train_index].values
+        imp_train[imp_col] = dataframe[imp_col].loc[imp_train_index].values
         imp_test['imp_result_col'] = meta_solvers_test[-1]
-        imp_test[imp_col] = dataframe[imp_col].iloc[imp_test_index].values
+        imp_test[imp_col] = dataframe[imp_col].loc[imp_test_index].values
 
         imp_dataframe = pd.concat([imp_train, imp_test], axis=0)
 
