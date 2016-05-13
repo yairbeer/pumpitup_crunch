@@ -91,7 +91,7 @@ param_grid = [
                'gamma': [0],
                'subsample': [0.75],
                'colsample_bytree': [0.5],
-               'n_monte_carlo': [5],
+               'n_monte_carlo': [1],
                'cv_n': [4],
                'test_rounds_fac': [1.2],
                'count_n': [0],
@@ -229,5 +229,4 @@ Final Solution
 # optimazing:
 # CV = 4, eta = 0.1
 # Added measurement year, weekday, month, week of the year and age: 0.80591
-# Optimizing Subsample and colsample_bytree: 0.809
-# testing standard deviation (montecarlo = 5):
+# Optimizing Subsample and colsample_bytree:

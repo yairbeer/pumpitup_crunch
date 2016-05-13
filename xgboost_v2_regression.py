@@ -6,6 +6,72 @@ from sklearn.grid_search import ParameterGrid
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import accuracy_score
 import datetime
+import scipy.optimize as optimize
+
+
+def ranking(predictions, split_index):
+    """
+    Ranking classification results in accordance to a splitter
+    :param predictions:
+    :param split_index:
+    :return: classified ranked predictions
+    """
+    # print predictions
+    ranked_predictions = np.ones(predictions.shape)
+
+    for i in range(1, len(split_index)):
+        cond = (split_index[i-1] <= predictions) * 1 * (predictions < split_index[i])
+        ranked_predictions[cond.astype('bool')] = i
+    cond = (predictions >= split_index[-1])
+    ranked_predictions[cond] = len(split_index)
+    # print cond
+    # print ranked_predictions
+    return ranked_predictions
+
+
+def opt_cut_global(predictions, results):
+    """
+    Find brute force optimized cutter
+    :param predictions:
+    :param results:
+    :return: global coarse optimized cutter
+    """
+    print(predictions)
+    print(results)
+    print('start quadratic splitter optimization')
+    x0_range = np.arange(0, 1.0, 0.05)
+    x1_range = np.arange(0.5, 1.5, 0.1)
+    bestcase = np.array(ranking(predictions, [0.5, 1.5])).astype('int')
+    bestscore = accuracy_score(results, bestcase)
+    print('The starting score is %f' % bestscore)
+
+    best_splitter = 0
+    # optimize classifier
+    for x0 in x0_range:
+        for x1 in x1_range:
+            case = np.array(ranking(predictions, (x0 + x1 * riskless_splitter))).astype('int')
+            score = accuracy_score(results, case)
+            if score > bestscore:
+                bestscore = score
+                best_splitter = x0 + x1 * riskless_splitter
+                print('For splitter ', (x0 + x1 * riskless_splitter))
+                print('Variables x0 = %f, x1 = %f' % (x0, x1))
+                print('The score is %f' % bestscore)
+    return best_splitter
+
+
+def opt_cut_local(x, *args):
+    """
+    Find local optimized cutter
+    :param x: current cutter
+    :param args: predictions, results
+    :return: current result
+    """
+    predictions, results = args
+    case = np.array(ranking(predictions, x)).astype('int')
+    score = -1 * accuracy_score(results, case)
+    # print score
+    return score
 
 
 def date_parser(df):
@@ -47,19 +113,14 @@ dataframe = date_parser(dataframe)
 
 # Factorize str columns
 print(dataframe.columns.values)
-num_cols = []
 for col in dataframe.columns.values:
     if dataframe[col].dtype.name == 'object':
-        print(dataframe[col].value_counts())
         dataframe[col] = dataframe[col].factorize()[0]
-    else:
-        num_cols.append(col)
-
-# No need for normalizing in xgboost (using a factor of the derivative as a vector of convergence)
 
 """
 Split into train and test
 """
+print(dataframe)
 
 train = dataframe.loc[train_index]
 test = dataframe.loc[test_index]
@@ -67,6 +128,7 @@ test = dataframe.loc[test_index]
 """
 CV
 """
+riskless_splitter = np.array([0.5, 1.5])
 best_score = 0
 best_params = 0
 best_train_prediction = 0
@@ -82,22 +144,20 @@ param_grid = [
               {
                'silent': [1],
                'nthread': [3],
-               'eval_metric': ['mlogloss'],
+               'eval_metric': ['rmse'],
                'eta': [0.1],
-               'objective': ['multi:softmax'],
+               'objective': ['reg:linear'],
                'max_depth': [6],
-               # 'min_child_weight': [1],
-               'num_round': [1000],
+               'num_round': [2000],
                'gamma': [0],
-               'subsample': [0.75],
-               'colsample_bytree': [0.5],
-               'n_monte_carlo': [5],
-               'cv_n': [4],
+               'subsample': [1.0],
+               'colsample_bytree': [1.0],
+               'n_monte_carlo': [1],
+               'cv_n': [2],
                'test_rounds_fac': [1.2],
                'count_n': [0],
-               'mc_test': [True],
-               'num_class': [3]
-               }
+               'mc_test': [True]
+              }
               ]
 
 print('start CV optimization')
@@ -160,12 +220,21 @@ for params in ParameterGrid(param_grid):
             predicted_results = xgclassifier.predict(xg_test)
             train_predictions[cv_test_index] = predicted_results
 
-        print('AUC score ', accuracy_score(train_labels.values, train_predictions))
-        mc_auc.append(accuracy_score(train_labels.values, train_predictions))
-        mc_train_pred.append(train_predictions)
+        print('Calculating final splitter')
+        splitter = opt_cut_global(train_predictions, train_labels.values.flatten())
+        # train machine learning
+        res = optimize.minimize(opt_cut_local, splitter, args=(train_predictions, train_labels.values.flatten()),
+                                method='Nelder-Mead',
+                                # options={'disp': True}
+                                )
+        classified_predicted_results = np.array(ranking(train_predictions, res.x)).astype('int')
+        print(classified_predicted_results.value_counts())
+        print('Accuracy score ', accuracy_score(train_labels.values, classified_predicted_results))
+        mc_auc.append(accuracy_score(train_labels.values, classified_predicted_results))
+        mc_train_pred.append(classified_predicted_results)
         mc_round.append(num_round)
 
-    mc_train_pred = (np.mean(np.array(mc_train_pred), axis=0) + 0.5).astype(int)
+    mc_train_pred = np.mean(np.array(mc_train_pred), axis=0)
 
     mc_round_list.append(int(np.mean(mc_round)))
     mc_acc_mean.append(np.mean(mc_auc))
@@ -175,7 +244,8 @@ for params in ParameterGrid(param_grid):
     print_results.append('The AUC range is: %.5f to %.5f and best n_round: %d' %
                          (mc_acc_mean[-1] - mc_acc_sd[-1], mc_acc_mean[-1] + mc_acc_sd[-1], mc_round_list[-1]))
     print('For ', mc_auc)
-    print('The accuracy of the average prediction is: %.5f' % accuracy_score(train_labels.values, mc_train_pred))
+    print('The accuracy of the average prediction is: %.5f' % accuracy_score(train_labels.values,
+                                                                             (mc_train_pred + 0.5).astype(int)))
     meta_solvers_train.append(mc_train_pred)
 
     # train machine learning
@@ -204,9 +274,9 @@ for params in ParameterGrid(param_grid):
         mc_train_pred = label_encoder.inverse_transform(mc_train_pred.astype(int))
         print(meta_solvers_test[-1])
         meta_solvers_test[-1] = label_encoder.inverse_transform(meta_solvers_test[-1])
-        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d6.csv')
+        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d6_reg.csv')
         submission_file['status_group'] = meta_solvers_test[-1]
-        submission_file.to_csv("results/test_xgboost_d6.csv")
+        submission_file.to_csv("results/test_xgboost_d6_reg.csv")
 
     if mc_acc_mean[-1] < best_score:
         print('new best log loss')
@@ -227,7 +297,7 @@ print(mc_acc_sd)
 Final Solution
 """
 # optimazing:
-# CV = 4, eta = 0.1
-# Added measurement year, weekday, month, week of the year and age: 0.80591
-# Optimizing Subsample and colsample_bytree: 0.809
-# testing standard deviation (montecarlo = 5):
+# CV = 4
+# No date (The only, cv=5): 0.53988215488215485
+# Added measurement year, weekday, month, week of the year and age: 0.540050505051
+# Regression:
