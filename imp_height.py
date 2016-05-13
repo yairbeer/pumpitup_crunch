@@ -189,9 +189,9 @@ for params in ParameterGrid(param_grid):
         """
         added imputed results and old inputted data
         """
-        imp_train['imp_result_col'] = meta_solvers_train[-1]
+        imp_train[imp_result_col] = meta_solvers_train[-1]
         imp_train[imp_col] = dataframe[imp_col].loc[imp_train_index].values
-        imp_test['imp_result_col'] = meta_solvers_test[-1]
+        imp_test[imp_result_col] = meta_solvers_test[-1]
         imp_test[imp_col] = dataframe[imp_col].loc[imp_test_index].values
 
         imp_dataframe = pd.concat([imp_train, imp_test], axis=0)
