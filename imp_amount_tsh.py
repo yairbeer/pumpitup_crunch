@@ -21,9 +21,9 @@ def date_parser(df):
 """
 Import data
 """
-train = pd.DataFrame.from_csv('train.csv')
+train = pd.DataFrame.from_csv('train_preprocessed_imp_height.csv')
 train_index = train.index.values
-test = pd.DataFrame.from_csv('test.csv')
+test = pd.DataFrame.from_csv('test_preprocessed_imp_height.csv')
 test_index = test.index.values
 print(train)
 
@@ -32,27 +32,14 @@ print(train)
 dataframe = pd.concat([train, test], axis=0)
 
 """
-Preprocess
+Preprocessing already done
 """
-
-# Parse date (removing is the easiest)
-dataframe = date_parser(dataframe)
-
-# Factorize str columns
-print(dataframe.columns.values)
-num_cols = []
-for col in dataframe.columns.values:
-    if dataframe[col].dtype.name == 'object':
-        # print(dataframe[col].value_counts())
-        dataframe[col] = dataframe[col].factorize()[0]
-    else:
-        num_cols.append(col)
 
 """
 Split into imputated train and test
 """
-imp_col = 'gps_height'
-imp_result_col = 'imp_height'
+imp_col = 'amount_tsh'
+imp_result_col = 'imp_tsh'
 imp_val = 0
 imp_train = dataframe.iloc[(dataframe[imp_col] != imp_val).values]
 imp_train_index = imp_train.index.values
@@ -202,8 +189,10 @@ for params in ParameterGrid(param_grid):
         """
         print(train)
         print(imp_dataframe.loc[train_index])
-        imp_dataframe.loc[train_index].to_csv('train_preprocessed_imp_height.csv')
-        imp_dataframe.loc[test_index].to_csv("test_preprocessed_imp_height.csv")
+        imp_dataframe.loc[train_index].to_csv('train_preprocessed_imp_height_tsh.csv')
+        imp_dataframe.loc[test_index].to_csv("test_preprocessed_imp_height_tsh.csv")
 
 print(params_list)
 print(print_results)
+
+# RSME of imputation:
