@@ -10,7 +10,7 @@ import datetime
 
 def date_parser(df):
     date_recorder = list(map(lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d'),
-                               df['date_recorded'].values))
+                             df['date_recorded'].values))
     df['year_recorder'] = list(map(lambda x: int(x.strftime('%Y')), date_recorder))
     df['weekday_recorder'] = list(map(lambda x: int(x.strftime('%w')), date_recorder))
     df['yearly_week_recorder'] = list(map(lambda x: int(x.strftime('%W')), date_recorder))
@@ -47,14 +47,19 @@ dataframe = date_parser(dataframe)
 
 # Factorize str columns
 print(dataframe.columns.values)
+num_cols = []
 for col in dataframe.columns.values:
     if dataframe[col].dtype.name == 'object':
+        print(dataframe[col].value_counts())
         dataframe[col] = dataframe[col].factorize()[0]
+    else:
+        num_cols.append(col)
+
+# No need for normalizing in xgboost (using a factor of the derivative as a vector of convergence)
 
 """
 Split into train and test
 """
-print(dataframe)
 
 train = dataframe.loc[train_index]
 test = dataframe.loc[test_index]
@@ -78,13 +83,13 @@ param_grid = [
                'silent': [1],
                'nthread': [3],
                'eval_metric': ['mlogloss'],
-               'eta': [0.01],
+               'eta': [0.1],
                'objective': ['multi:softmax'],
                'max_depth': [6],
                # 'min_child_weight': [1],
                'num_round': [1000],
                'gamma': [0],
-               'subsample': [1.0],
+               'subsample': [0.5, 0.75, 1.0],
                'colsample_bytree': [1.0],
                'n_monte_carlo': [1],
                'cv_n': [4],
@@ -160,7 +165,6 @@ for params in ParameterGrid(param_grid):
         mc_train_pred.append(train_predictions)
         mc_round.append(num_round)
 
-    print(np.array(mc_train_pred))
     mc_train_pred = (np.mean(np.array(mc_train_pred), axis=0) + 0.5).astype(int)
 
     mc_round_list.append(int(np.mean(mc_round)))
@@ -223,6 +227,6 @@ print(mc_acc_sd)
 Final Solution
 """
 # optimazing:
-# CV = 4
-# No date (The only, cv=5): 0.53988215488215485
-# Added measurement year, weekday, month, week of the year and age: 0.540050505051
+# CV = 4, eta = 0.1
+# Added measurement year, weekday, month, week of the year and age: 0.80591
+# Normalizing:
