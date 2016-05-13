@@ -26,21 +26,15 @@ train = pd.DataFrame.from_csv('train.csv')
 train_index = train.index.values
 test = pd.DataFrame.from_csv('test.csv')
 test_index = test.index.values
+print(train)
 
 # combing tran and test data
 # helps working on all the data and removes factorization problems between train and test
 dataframe = pd.concat([train, test], axis=0)
 
-train_labels = pd.DataFrame.from_csv('labels.csv')
-
-submission_file = pd.DataFrame.from_csv("SubmissionFormat.csv")
-
 """
 Preprocess
 """
-# Change labels to ints in order to use as y vector
-label_encoder = LabelEncoder()
-train_labels.iloc[:, 0] = label_encoder.fit_transform(train_labels.values.flatten())
 
 # Parse date (removing is the easiest)
 dataframe = date_parser(dataframe)
@@ -50,31 +44,26 @@ print(dataframe.columns.values)
 num_cols = []
 for col in dataframe.columns.values:
     if dataframe[col].dtype.name == 'object':
-        print(dataframe[col].value_counts())
+        # print(dataframe[col].value_counts())
         dataframe[col] = dataframe[col].factorize()[0]
     else:
         num_cols.append(col)
 
-# No need for normalizing in xgboost (using a factor of the derivative as a vector of convergence)
+"""
+Split into imputated train and test
+"""
+imp_col = 'gps_height'
+imp_val = 0
+imp_train = dataframe.iloc[(dataframe[imp_col] != imp_val).values]
+imp_test = dataframe.iloc[(dataframe[imp_col] == imp_val).values]
 
-"""
-Split into train and test
-"""
+imp_y = imp_train[imp_col].values.flatten()
 
-train = dataframe.loc[train_index]
-test = dataframe.loc[test_index]
+del imp_train[imp_col]
+del imp_test[imp_col]
 
-"""
-CV
-"""
-best_score = 0
-best_params = 0
-best_train_prediction = 0
-best_prediction = 0
-meta_solvers_train = []
-meta_solvers_test = []
-best_train = 0
-best_test = 0
+print(imp_train)
+print(imp_test)
 
 # Optimization parameters
 early_stopping = 50
@@ -119,14 +108,14 @@ for params in ParameterGrid(param_grid):
     # Use monte carlo simulation if needed to find small improvements
     for i_mc in range(params['n_monte_carlo']):
         cv_n = params['cv_n']
-        kf = StratifiedKFold(train_labels.values.flatten(), n_folds=cv_n, shuffle=True, random_state=i_mc ** 3)
+        kf = StratifiedKFold(imp_y, n_folds=cv_n, shuffle=True, random_state=i_mc ** 3)
 
         xgboost_rounds = []
         # Finding optimized number of rounds
         for cv_train_index, cv_test_index in kf:
             X_train, X_test = train.values[cv_train_index, :], train.values[cv_test_index, :]
-            y_train = train_labels.iloc[cv_train_index].values.flatten()
-            y_test = train_labels.iloc[cv_test_index].values.flatten()
+            y_train = imp_y[cv_train_index]
+            y_test = imp_y[cv_test_index]
 
             # train machine learning
             xg_train = xgboost.DMatrix(X_train, label=y_train)
@@ -144,8 +133,8 @@ for params in ParameterGrid(param_grid):
         # Calculate train predictions over optimized number of rounds
         for cv_train_index, cv_test_index in kf:
             X_train, X_test = train.values[cv_train_index, :], train.values[cv_test_index, :]
-            y_train = train_labels.iloc[cv_train_index].values.flatten()
-            y_test = train_labels.iloc[cv_test_index].values.flatten()
+            y_train = imp_y[cv_train_index]
+            y_test = imp_y[cv_test_index]
 
             # train machine learning
             xg_train = xgboost.DMatrix(X_train, label=y_train)
@@ -159,8 +148,8 @@ for params in ParameterGrid(param_grid):
             predicted_results = xgclassifier.predict(xg_test)
             train_predictions[cv_test_index] = predicted_results
 
-        print('Accuracy score ', accuracy_score(train_labels.values, train_predictions))
-        mc_auc.append(accuracy_score(train_labels.values, train_predictions))
+        print('AUC score ', accuracy_score(imp_y, train_predictions))
+        mc_auc.append(accuracy_score(imp_y, train_predictions))
         mc_train_pred.append(train_predictions)
         mc_round.append(num_round)
 
@@ -172,7 +161,7 @@ for params in ParameterGrid(param_grid):
     mc_acc_sd.append(np.std(mc_auc))
     print('The accuracy range is: %.5f to %.5f and best n_round: %d' %
           (mc_acc_mean[-1] - mc_acc_sd[-1], mc_acc_mean[-1] + mc_acc_sd[-1], mc_round_list[-1]))
-    print_results.append('The accuracy range is: %.5f to %.5f and best n_round: %d' %
+    print_results.append('The AUC range is: %.5f to %.5f and best n_round: %d' %
                          (mc_acc_mean[-1] - mc_acc_sd[-1], mc_acc_mean[-1] + mc_acc_sd[-1], mc_round_list[-1]))
     print('For ', mc_auc)
     print('The accuracy of the average prediction is: %.5f' % accuracy_score(train_labels.values, mc_train_pred))
@@ -205,18 +194,9 @@ for params in ParameterGrid(param_grid):
         mc_train_pred = label_encoder.inverse_transform(mc_train_pred.astype(int))
         print(meta_solvers_test[-1])
         meta_solvers_test[-1] = label_encoder.inverse_transform(meta_solvers_test[-1])
-        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d6.csv')
+        pd.DataFrame(mc_train_pred).to_csv('train_preprocessed_imp_height.csv')
         submission_file['status_group'] = meta_solvers_test[-1]
-        submission_file.to_csv("results/test_xgboost_d6.csv")
-
-    # saving best score for printing
-    if mc_acc_mean[-1] < best_score:
-        print('new best log loss')
-        best_score = mc_acc_mean[-1]
-        best_params = params
-        best_train_prediction = mc_train_pred
-        if params['mc_test']:
-            best_prediction = meta_solvers_test[-1]
+        submission_file.to_csv("results/test_preprocessed_imp_height.csv")
 
 print(best_score)
 print(best_params)
@@ -225,11 +205,3 @@ print(params_list)
 print(print_results)
 print(mc_acc_mean)
 print(mc_acc_sd)
-"""
-Final Solution
-"""
-# optimazing:
-# CV = 4, eta = 0.1
-# Added measurement year, weekday, month, week of the year and age: 0.80591
-# Optimizing Subsample and colsample_bytree: 0.809
-# testing standard deviation (montecarlo = 5): SD = 0.004
