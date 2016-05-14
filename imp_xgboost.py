@@ -20,6 +20,16 @@ def date_parser(df):
     return df
 
 
+def col_to_freq(df, col_names):
+    for col in col_names:
+        print('Changing to frequency %s' %col)
+        val_counts = df[col].value_counts()
+        df[col + '_freq'] = np.zeros((df.shape[0],))
+        for i, val in enumerate(df[col].values):
+            df[col + '_freq'].iat[i] = int(val_counts.at[val])
+    return df
+
+
 def evalerror(preds, dtrain):
     """
     accuracy calculation function for xgboost
@@ -49,11 +59,12 @@ train_labels = pd.DataFrame.from_csv('labels.csv')
 submission_file = pd.DataFrame.from_csv("SubmissionFormat.csv")
 
 """
-Preprocess already done
+Preprocess: date parsing already done
 """
 # Change labels to ints in order to use as y vector
 label_encoder = LabelEncoder()
 train_labels.iloc[:, 0] = label_encoder.fit_transform(train_labels.values.flatten())
+
 
 """
 Split into train and test

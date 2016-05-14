@@ -18,6 +18,15 @@ def date_parser(df):
     del df['date_recorded']
     return df
 
+
+def col_to_freq(df, col_names):
+    for col in col_names:
+        print('Changing to frequency %s' %col)
+        val_counts = df[col].value_counts()
+        df[col + '_freq'] = np.zeros((df.shape[0],))
+        for i, val in enumerate(df[col].values):
+            df[col + '_freq'].iat[i] = int(val_counts.at[val])
+    return df
 """
 Import data
 """
@@ -38,12 +47,15 @@ Preprocess
 # Parse date (removing is the easiest)
 dataframe = date_parser(dataframe)
 
+# add to frequency scheme_name, ward, subvillage, wpt_name, installer, and funder. lga needs checking?
+dataframe = col_to_freq(dataframe, ['scheme_name', 'ward', 'subvillage', 'wpt_name', 'installer', 'funder'])
+
 # Factorize str columns
 print(dataframe.columns.values)
 num_cols = []
 for col in dataframe.columns.values:
     if dataframe[col].dtype.name == 'object':
-        # print(dataframe[col].value_counts())
+        print(dataframe[col].value_counts())
         dataframe[col] = dataframe[col].factorize()[0]
     else:
         num_cols.append(col)
