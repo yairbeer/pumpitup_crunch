@@ -90,7 +90,7 @@ param_grid = [
                'colsample_bytree': [0.5],
                'n_monte_carlo': [1],
                'cv_n': [4],
-               'test_rounds_fac': [1.2],
+               'test_rounds_fac': [1],
                'count_n': [0],
                'mc_test': [True],
                'num_class': [3]
