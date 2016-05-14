@@ -178,17 +178,16 @@ for params in ParameterGrid(param_grid):
         """
         added imputed results
         """
-        imp_train[imp_result_col] = np.exp(meta_solvers_train[-1])
         imp_train[imp_col] = dataframe[imp_col].loc[imp_train_index].values
-        imp_test[imp_result_col] = np.exp(meta_solvers_test[-1])
-        imp_test[imp_col] = dataframe[imp_col].loc[imp_test_index].values
+        imp_test[imp_col] = meta_solvers_test[-1]
+        imp_train[imp_result_col] = np.zeros((imp_train.shape[0]))
+        imp_test[imp_result_col] = np.ones((imp_train.shape[0]))
 
         imp_dataframe = pd.concat([imp_train, imp_test], axis=0)
 
         """
         Write imputated results
         """
-        print(train)
         print(imp_dataframe)
         imp_dataframe.loc[train_index].to_csv('train_preprocessed_imp_height_tsh.csv')
         imp_dataframe.loc[test_index].to_csv("test_preprocessed_imp_height_tsh.csv")
