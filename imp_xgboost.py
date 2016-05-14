@@ -218,4 +218,4 @@ Final Solution
 # Added measurement year, weekday, month, week of the year and age: 0.80591
 # Optimizing Subsample and colsample_bytree: 0.809
 # testing standard deviation (montecarlo = 5): SD = 0.004
-# imputating height and tsh: 0.80788
+# imputating height and tsh:

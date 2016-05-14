@@ -192,7 +192,7 @@ for params in ParameterGrid(param_grid):
         imp_train[imp_col] = dataframe[imp_col].loc[imp_train_index].values
         imp_test[imp_col] = meta_solvers_test[-1]
         imp_train[imp_result_col] = np.zeros((imp_train.shape[0]))
-        imp_test[imp_result_col] = np.ones((imp_train.shape[0]))
+        imp_test[imp_result_col] = np.ones((imp_test.shape[0]))
 
         imp_dataframe = pd.concat([imp_train, imp_test], axis=0)
 
