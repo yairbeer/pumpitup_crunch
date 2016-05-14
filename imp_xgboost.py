@@ -69,7 +69,7 @@ best_train = 0
 best_test = 0
 
 # Optimization parameters
-early_stopping = 50
+early_stopping = 300
 param_grid = [
               {
                'silent': [1],
@@ -78,7 +78,7 @@ param_grid = [
                'eta': [0.1],
                'objective': ['multi:softmax'],
                'max_depth': [6],
-               'num_round': [1000],
+               'num_round': [2000],
                'gamma': [0],
                'subsample': [0.75],
                'colsample_bytree': [0.5],
@@ -226,3 +226,4 @@ Final Solution
 # Optimizing Subsample and colsample_bytree: 0.809
 # testing standard deviation (montecarlo = 5): SD = 0.004
 # imputating height and tsh: 0.808501683502
+# Changed early stopping parameter to accuracy (as in the metric of eval), best round changed to ~1030:
