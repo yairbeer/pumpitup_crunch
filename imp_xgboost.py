@@ -21,6 +21,12 @@ def date_parser(df):
 
 
 def evalerror(preds, dtrain):
+    """
+    accuracy calculation function for xgboost
+    :param preds: predictions
+    :param dtrain: labels
+    :return: -1 * accuracy (for minimization)
+    """
     labels = dtrain.get_label()
     # return a pair metric_name, result
     # since preds are margin(before logistic transformation, cutoff at 0)
@@ -226,4 +232,4 @@ Final Solution
 # Optimizing Subsample and colsample_bytree: 0.809
 # testing standard deviation (montecarlo = 5): SD = 0.004
 # imputating height and tsh: 0.808501683502
-# Changed early stopping parameter to accuracy (as in the metric of eval), best round changed to ~1030:
+# Changed early stopping parameter to accuracy (as in the metric of eval), best round changed to ~1030: 0.810622895623
