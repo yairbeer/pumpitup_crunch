@@ -65,7 +65,7 @@ param_grid = [
                'objective': ['reg:linear'],
                'max_depth': [6],
                # 'min_child_weight': [1],
-               'num_round': [10000],
+               'num_round': [670, 700, 730, 760],
                'gamma': [0],
                'subsample': [0.75],
                'colsample_bytree': [0.75],
@@ -100,24 +100,25 @@ for params in ParameterGrid(param_grid):
         cv_n = params['cv_n']
         kf = KFold(imp_train.shape[0], n_folds=cv_n, shuffle=True, random_state=i_mc ** 3)
 
-        xgboost_rounds = []
-        # Finding optimized number of rounds
-        for cv_train_index, cv_test_index in kf:
-            X_train, X_test = imp_train.values[cv_train_index, :], imp_train.values[cv_test_index, :]
-            y_train = imp_y[cv_train_index]
-            y_test = imp_y[cv_test_index]
-
-            # train machine learning
-            xg_train = xgboost.DMatrix(X_train, label=y_train)
-            xg_test = xgboost.DMatrix(X_test, label=y_test)
-
-            watchlist = [(xg_train, 'train'), (xg_test, 'test')]
-
-            num_round = params['num_round']
-            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, early_stopping_rounds=early_stopping);
-            xgboost_rounds.append(xgclassifier.best_iteration)
-
-        num_round = int(np.mean(xgboost_rounds))
+        # xgboost_rounds = []
+        # # Finding optimized number of rounds
+        # for cv_train_index, cv_test_index in kf:
+        #     X_train, X_test = imp_train.values[cv_train_index, :], imp_train.values[cv_test_index, :]
+        #     y_train = imp_y[cv_train_index]
+        #     y_test = imp_y[cv_test_index]
+        #
+        #     # train machine learning
+        #     xg_train = xgboost.DMatrix(X_train, label=y_train)
+        #     xg_test = xgboost.DMatrix(X_test, label=y_test)
+        #
+        #     watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+        #
+        #     num_round = params['num_round']
+        #     xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, early_stopping_rounds=early_stopping);
+        #     xgboost_rounds.append(xgclassifier.best_iteration)
+        #
+        # num_round = int(np.mean(xgboost_rounds))
+        num_round = params['num_round']
         print('The best n_rounds is %d' % num_round)
 
         # Calculate train predictions over optimized number of rounds
@@ -195,4 +196,4 @@ for params in ParameterGrid(param_grid):
 print(params_list)
 print(print_results)
 
-# RSME of imputation: 0.43 (of log)
+# RSME of imputation:

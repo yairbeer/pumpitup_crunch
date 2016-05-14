@@ -19,6 +19,13 @@ def date_parser(df):
     del df['date_recorded']
     return df
 
+
+def evalerror(preds, dtrain):
+    labels = dtrain.get_label()
+    # return a pair metric_name, result
+    # since preds are margin(before logistic transformation, cutoff at 0)
+    return 'Accuracy', -1 * float(sum(labels == preds)) / len(labels)
+
 """
 Import data
 """
@@ -67,11 +74,10 @@ param_grid = [
               {
                'silent': [1],
                'nthread': [3],
-               'eval_metric': ['mlogloss'],
+               # 'eval_metric': ['evalerror'],
                'eta': [0.1],
                'objective': ['multi:softmax'],
                'max_depth': [6],
-               # 'min_child_weight': [1],
                'num_round': [1000],
                'gamma': [0],
                'subsample': [0.75],
@@ -120,7 +126,8 @@ for params in ParameterGrid(param_grid):
             watchlist = [(xg_train, 'train'), (xg_test, 'test')]
 
             num_round = params['num_round']
-            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, early_stopping_rounds=early_stopping);
+            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, early_stopping_rounds=early_stopping,
+                                         feval=evalerror);
             xgboost_rounds.append(xgclassifier.best_iteration)
 
         num_round = int(np.mean(xgboost_rounds))
@@ -138,7 +145,7 @@ for params in ParameterGrid(param_grid):
 
             watchlist = [(xg_train, 'train'), (xg_test, 'test')]
 
-            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
+            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, feval=evalerror);
 
             # predict
             predicted_results = xgclassifier.predict(xg_test)
@@ -180,7 +187,7 @@ for params in ParameterGrid(param_grid):
 
             watchlist = [(xg_train, 'train')]
 
-            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
+            xgclassifier = xgboost.train(params, xg_train, num_round, watchlist, feval=evalerror);
             predicted_results = xgclassifier.predict(xg_test)
             mc_pred.append(predicted_results)
 
@@ -213,9 +220,9 @@ print(mc_acc_sd)
 """
 Final Solution
 """
-# optimazing:
+# optimazing: best round is ~670
 # CV = 4, eta = 0.1
 # Added measurement year, weekday, month, week of the year and age: 0.80591
 # Optimizing Subsample and colsample_bytree: 0.809
 # testing standard deviation (montecarlo = 5): SD = 0.004
-# imputating height and tsh:
+# imputating height and tsh: 0.808501683502
