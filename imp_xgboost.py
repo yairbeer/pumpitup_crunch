@@ -88,18 +88,38 @@ best_test = 0
 # Optimization parameters
 early_stopping = 300
 param_grid = [
+              # For optimization
+              # {
+              #  'silent': [1],
+              #  'nthread': [3],
+              #  # 'eval_metric': ['evalerror'],
+              #  'eta': [0.1],
+              #  'objective': ['multi:softmax'],
+              #  'max_depth': [6],
+              #  'num_round': [10000],
+              #  'gamma': [0],
+              #  'subsample': [0.8],
+              #  'colsample_bytree': [0.3],
+              #  'n_monte_carlo': [1],
+              #  'cv_n': [4],
+              #  'test_rounds_fac': [1],
+              #  'count_n': [0],
+              #  'mc_test': [True],
+              #  'num_class': [3]
+              #  },
+              # For final calculation
               {
                'silent': [1],
                'nthread': [3],
                # 'eval_metric': ['evalerror'],
-               'eta': [0.1],
+               'eta': [0.03],
                'objective': ['multi:softmax'],
                'max_depth': [6],
-               'num_round': [2000],
+               'num_round': [10000],
                'gamma': [0],
-               'subsample': [0.75],
-               'colsample_bytree': [0.5],
-               'n_monte_carlo': [1],
+               'subsample': [0.8],
+               'colsample_bytree': [0.3],
+               'n_monte_carlo': [5],
                'cv_n': [4],
                'test_rounds_fac': [1],
                'count_n': [0],
@@ -214,9 +234,9 @@ for params in ParameterGrid(param_grid):
         mc_train_pred = label_encoder.inverse_transform(mc_train_pred.astype(int))
         print(meta_solvers_test[-1])
         meta_solvers_test[-1] = label_encoder.inverse_transform(meta_solvers_test[-1])
-        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d6.csv')
+        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d6_mc%d.csv' % i_mc)
         submission_file['status_group'] = meta_solvers_test[-1]
-        submission_file.to_csv("results/test_xgboost_d6.csv")
+        submission_file.to_csv("results/test_xgboost_d6_mc%d.csv" % i_mc)
 
     # saving best score for printing
     if mc_acc_mean[-1] < best_score:
@@ -244,3 +264,5 @@ Final Solution
 # testing standard deviation (montecarlo = 5): SD = 0.004
 # imputating height and tsh: 0.808501683502
 # Changed early stopping parameter to accuracy (as in the metric of eval), best round changed to ~1030: 0.810622895623
+# Added frequency variables: 0.810589225589
+# Optimizied: 0.81126262626262624
