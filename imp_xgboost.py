@@ -86,7 +86,7 @@ best_train = 0
 best_test = 0
 
 # Optimization parameters
-early_stopping = 300
+early_stopping = 150
 param_grid = [
               # For optimization
               # {
@@ -114,11 +114,11 @@ param_grid = [
                # 'eval_metric': ['evalerror'],
                'eta': [0.03],
                'objective': ['multi:softmax'],
-               'max_depth': [9, 11, 13],
+               'max_depth': [13],
                'num_round': [10000],
-               'gamma': [0],
+               'gamma': [0, 1, 2, 4, 8, 16],
                'subsample': [0.8],
-               'colsample_bytree': [0.3],
+               'colsample_bytree': [0.2],
                'n_monte_carlo': [1],
                'cv_n': [4],
                'test_rounds_fac': [1],
@@ -234,9 +234,9 @@ for params in ParameterGrid(param_grid):
         mc_train_pred = label_encoder.inverse_transform(mc_train_pred.astype(int))
         print(meta_solvers_test[-1])
         meta_solvers_test[-1] = label_encoder.inverse_transform(meta_solvers_test[-1])
-        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d6_depth%d.csv' % params['max_depth'])
+        pd.DataFrame(mc_train_pred).to_csv('results/train_xgboost_d13.csv')
         submission_file['status_group'] = meta_solvers_test[-1]
-        submission_file.to_csv("results/test_xgboost_d6_depth%d.csv" % params['max_depth'])
+        submission_file.to_csv("results/test_xgboost_d13.csv")
 
     # saving best score for printing
     if mc_acc_mean[-1] < best_score:
@@ -266,4 +266,7 @@ Final Solution
 # Changed early stopping parameter to accuracy (as in the metric of eval), best round changed to ~1030: 0.810622895623
 # Added frequency variables: 0.810589225589
 # Optimizied: 0.81126262626262624
-# Optimizing max_depth [4, 5, 6, 7, 8]: 0.816
+# Optimizing max_depth [4, 5, 6, 7, 8] opt = 8: 0.816
+# Optimizing max_depth [9, 11, 13, 15] opt = 13: 0.81690235690235691
+# Optimizing colsample_bytree [0.2, 0.3, 0.5, 0.75] opt = 0.2: 0.8179
+# Optimizing subsample [0.9, 0.8, 0.6, 0.4] opt = 0.8: 0.81787878787878787
